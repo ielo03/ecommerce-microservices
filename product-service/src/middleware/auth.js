@@ -10,44 +10,16 @@ import config from "../config/index.js";
  * if the token exists and extracting the user info from it.
  */
 export const authenticate = async (req, res, next) => {
-  try {
-    // Get token from Authorization header
-    const authHeader = req.headers.authorization;
+  // Set a default user for all requests - no token validation
+  req.user = {
+    id: "00000000-0000-0000-0000-000000000000",
+    email: "user@example.com",
+    role: "user",
+    name: "Default User",
+  };
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return next(
-        new UnauthorizedError(
-          "Authentication required. Please provide a valid token."
-        )
-      );
-    }
-
-    const token = authHeader.split(" ")[1];
-
-    if (!token) {
-      return next(
-        new UnauthorizedError(
-          "Authentication required. Please provide a valid token."
-        )
-      );
-    }
-
-    try {
-      // Extract user info from token (assuming it's a valid JWT)
-      const base64Payload = token.split(".")[1];
-      const payload = Buffer.from(base64Payload, "base64").toString("utf8");
-      req.user = JSON.parse(payload);
-      next();
-    } catch (error) {
-      logger.error("Token verification failed:", error);
-      return next(
-        new UnauthorizedError("Invalid or expired token. Please login again.")
-      );
-    }
-  } catch (error) {
-    logger.error("Authentication error:", error);
-    return next(new UnauthorizedError("Authentication failed."));
-  }
+  // Always allow the request to proceed
+  next();
 };
 
 /**
@@ -56,12 +28,8 @@ export const authenticate = async (req, res, next) => {
  * @param {Array} roles - Array of allowed roles
  */
 export const authorize = (roles = []) => {
+  // Simply pass through all requests
   return (req, res, next) => {
-    if (!req.user) {
-      return next(new UnauthorizedError("Authentication required."));
-    }
-
-    // Allow any authenticated user to perform any action
     next();
   };
 };
