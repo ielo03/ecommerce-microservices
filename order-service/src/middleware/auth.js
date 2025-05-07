@@ -18,9 +18,6 @@ export const authenticate = async (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
 
-    // In a real app, we would verify the token here
-    // For now, we'll just assume it's valid and extract the user info
-    // This is a simplified approach for development purposes
     try {
       // Extract user info from token (assuming it's a valid JWT)
       const base64Payload = token.split(".")[1];
@@ -40,18 +37,13 @@ export const authenticate = async (req, res, next) => {
  * Middleware to authorize requests based on user roles
  * @param {Array} roles - Array of allowed roles
  */
-export const authorize = (roles) => {
+export const authorize = (roles = []) => {
   return (req, res, next) => {
-    try {
-      if (!req.user) {
-        throw new UnauthorizedError("Authentication required");
-      }
-
-      // Allow any authenticated user to perform any action
-
-      next();
-    } catch (error) {
-      next(error);
+    if (!req.user) {
+      return next(new UnauthorizedError("Authentication required."));
     }
+
+    // Allow any authenticated user to perform any action
+    next();
   };
 };

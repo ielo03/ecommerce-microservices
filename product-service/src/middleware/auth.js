@@ -10,14 +10,44 @@ import config from "../config/index.js";
  * if the token exists and extracting the user info from it.
  */
 export const authenticate = async (req, res, next) => {
-  // Just use mockAuthenticate for now
-  req.user = {
-    id: "00000000-0000-0000-0000-000000000000",
-    email: "admin@example.com",
-    role: "admin",
-    name: "Admin User",
-  };
-  next();
+  try {
+    // Get token from Authorization header
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return next(
+        new UnauthorizedError(
+          "Authentication required. Please provide a valid token."
+        )
+      );
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    if (!token) {
+      return next(
+        new UnauthorizedError(
+          "Authentication required. Please provide a valid token."
+        )
+      );
+    }
+
+    try {
+      // Extract user info from token (assuming it's a valid JWT)
+      const base64Payload = token.split(".")[1];
+      const payload = Buffer.from(base64Payload, "base64").toString("utf8");
+      req.user = JSON.parse(payload);
+      next();
+    } catch (error) {
+      logger.error("Token verification failed:", error);
+      return next(
+        new UnauthorizedError("Invalid or expired token. Please login again.")
+      );
+    }
+  } catch (error) {
+    logger.error("Authentication error:", error);
+    return next(new UnauthorizedError("Authentication failed."));
+  }
 };
 
 /**
@@ -73,20 +103,4 @@ export const authenticateService = async (req, res, next) => {
     logger.error("Service authentication error:", error);
     return next(new UnauthorizedError("Service authentication failed."));
   }
-};
-
-/**
- * Mock authentication middleware for development
- * Adds a mock user to the request
- */
-export const mockAuthenticate = (req, res, next) => {
-  // Allow mock authentication in any environment
-  req.user = {
-    id: "00000000-0000-0000-0000-000000000000",
-    email: "admin@example.com",
-    role: "admin",
-    name: "Admin User",
-  };
-
-  next();
 };

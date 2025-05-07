@@ -4,11 +4,7 @@ import {
   validateProduct,
   validateProductId,
 } from "../middleware/validators.js";
-import {
-  authenticate,
-  authorize,
-  mockAuthenticate,
-} from "../middleware/auth.js";
+import { authenticate, authorize } from "../middleware/auth.js";
 
 const router = express.Router();
 
