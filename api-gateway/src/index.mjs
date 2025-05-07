@@ -88,34 +88,20 @@ app.get("/health", (req, res) => {
   res.status(200).json({ status: "UP", service: "api-gateway" });
 });
 
-// Authentication middleware
+// Authentication middleware - simplified to allow all requests
 const authenticate = (req, res, next) => {
-  const authHeader = req.headers.authorization;
+  // Set a default user for all requests - no token validation
+  req.user = {
+    userId: "00000000-0000-0000-0000-000000000000",
+    email: "user@example.com",
+    role: "user",
+    name: "Default User",
+  };
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    console.log(
-      `Authentication failed: No valid Authorization header [${req.originalUrl}]`
-    );
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  const token = authHeader.split(" ")[1];
-
-  try {
-    // Use the same simplified token verification approach as the other services
-    // Extract user info from token (assuming it's a valid JWT)
-    const base64Payload = token.split(".")[1];
-    const payload = Buffer.from(base64Payload, "base64").toString("utf8");
-    req.user = JSON.parse(payload);
-    console.log(`User authenticated: ${req.user.userId} [${req.originalUrl}]`);
-    next();
-  } catch (err) {
-    console.log(
-      `Authentication failed: Invalid token [${req.originalUrl}]`,
-      err.message
-    );
-    return res.status(401).json({ message: "Invalid token" });
-  }
+  console.log(
+    `User automatically authenticated: ${req.user.userId} [${req.originalUrl}]`
+  );
+  next();
 };
 
 // Proxy middleware options with logging and error handling
