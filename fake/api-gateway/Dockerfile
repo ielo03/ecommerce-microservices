@@ -1,4 +1,4 @@
-# Use Node.js as the base image
+# Use Node.js 18 as the base image
 FROM node:slim
 
 # Set working directory
@@ -15,17 +15,13 @@ COPY . .
 # Set environment variables
 ENV NODE_ENV=production
 ENV PORT=8080
-ENV HOST=0.0.0.0
-# Ensure logs are not buffered
-ENV NODE_OPTIONS="--no-warnings"
-ENV NPM_CONFIG_LOGLEVEL="info"
 
 # Expose the port the app runs on
 EXPOSE 8080
 
 # Health check
-HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
-  CMD wget -q --spider http://localhost:8080/api-gateway/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget -q --spider http://localhost:8080/health || exit 1
 
-# Start the application with unbuffered output
-CMD ["node", "index.js"]
+# Start the application
+CMD ["node", "src/index.mjs"]

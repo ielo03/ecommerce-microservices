@@ -1,19 +1,16 @@
 services:
-  # MySQL Database
+  # MySQL database
   mysql:
     image: mysql:8.0
-    container_name: ecommerce-mysql
-    restart: always
     ports:
       - "3306:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: ecommerce
-      MYSQL_USER: ecommerce
-      MYSQL_PASSWORD: ecommerce
     volumes:
       - mysql-data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d
+    networks:
+      - app-network
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=notes_app
     healthcheck:
       test:
         [
@@ -24,123 +21,120 @@ services:
           "localhost",
           "-u",
           "root",
-          "-p$$MYSQL_ROOT_PASSWORD",
+          "-ppassword",
         ]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 15s
 
-  # Product Service
-  product-service:
-    build:
-      context: ./product-service
-      dockerfile: Dockerfile
-    container_name: ecommerce-product-service
-    restart: always
+  # Backend service
+  backend:
+    build: ./backend
     ports:
-      - "8081:8080"
-    environment:
-      NODE_ENV: development
-      PORT: 8080
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_NAME: ecommerce
-      DB_USERNAME: ecommerce
-      DB_PASSWORD: ecommerce
-      LOG_LEVEL: debug
-      LOG_FORMAT: console
-      JWT_SECRET: your-secret-key
+      - "8082:8082"
     depends_on:
       mysql:
         condition: service_healthy
-    # Remove volume mounts to prevent overriding node_modules
-
-  # Order Service
-  order-service:
-    build:
-      context: ./order-service
-      dockerfile: Dockerfile
-    container_name: ecommerce-order-service
-    restart: always
-    ports:
-      - "8082:8080"
     environment:
-      NODE_ENV: development
-      PORT: 8080
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_NAME: ecommerce
-      DB_USERNAME: ecommerce
-      DB_PASSWORD: ecommerce
-      PRODUCT_SERVICE_URL: http://product-service:8080
-      USER_SERVICE_URL: http://user-service:8080
-      LOG_LEVEL: debug
-      LOG_FORMAT: console
-      JWT_SECRET: your-secret-key
-    depends_on:
-      mysql:
-        condition: service_healthy
-      product-service:
-        condition: service_started
-      user-service:
-        condition: service_started
-    volumes:
-      - ./order-service:/app
-      - /app/node_modules
+      - NODE_ENV=production
+      - PORT=8082
+      - HOST=0.0.0.0
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=notes_app
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8082/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: on-failure
+    # Ensure logs are not buffered
+    tty: true
+    stdin_open: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # User Service
-  user-service:
-    build:
-      context: ./user-service
-      dockerfile: Dockerfile
-    container_name: ecommerce-user-service
-    restart: always
+  # Frontend service
+  frontend:
+    build: ./frontend
     ports:
-      - "8083:8080"
+      - "8081:8081"
     environment:
-      NODE_ENV: development
-      PORT: 8080
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_NAME: ecommerce
-      DB_USERNAME: ecommerce
-      DB_PASSWORD: ecommerce
-      JWT_SECRET: your-secret-key
-      JWT_EXPIRES_IN: 1d
-      LOG_LEVEL: debug
-      LOG_FORMAT: console
-    depends_on:
-      mysql:
-        condition: service_healthy
-    volumes:
-      - ./user-service:/app
-      - /app/node_modules
+      - NODE_ENV=production
+      - PORT=8081
+      - HOST=0.0.0.0
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: on-failure
+    # Ensure logs are not buffered
+    tty: true
+    stdin_open: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # API Gateway
   api-gateway:
-    build:
-      context: ./api-gateway
-      dockerfile: Dockerfile
-    container_name: ecommerce-api-gateway
-    restart: always
+    build: ./api-gateway
     ports:
       - "8080:8080"
-    environment:
-      NODE_ENV: development
-      PORT: 8080
-      PRODUCT_SERVICE_URL: http://product-service:8080
-      ORDER_SERVICE_URL: http://order-service:8080
-      USER_SERVICE_URL: http://user-service:8080
-      JWT_SECRET: your-secret-key
-      LOG_LEVEL: debug
-      LOG_FORMAT: console
     depends_on:
-      - product-service
-      - order-service
-      - user-service
-    volumes:
-      - ./api-gateway:/app
-      - /app/node_modules
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - HOST=0.0.0.0
+      - FRONTEND_HOST=frontend
+      - BACKEND_HOST=backend
+      - FRONTEND_PORT=8081
+      - BACKEND_PORT=8082
+    networks:
+      - app-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "-q",
+          "--spider",
+          "http://localhost:8080/api-gateway/health",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: on-failure
+    # Ensure logs are not buffered
+    tty: true
+    stdin_open: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   mysql-data:
