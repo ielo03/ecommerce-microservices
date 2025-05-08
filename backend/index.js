@@ -38,6 +38,22 @@ let dbConnection = "disconnected";
 // Sleep function for retry delays
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Helper function to convert snake_case to camelCase
+const toCamelCase = (obj) => {
+  if (Array.isArray(obj)) {
+    return obj.map((v) => toCamelCase(v));
+  } else if (obj !== null && obj !== undefined && typeof obj === "object") {
+    return Object.keys(obj).reduce((result, key) => {
+      const camelKey = key.replace(/_([a-z])/g, (_, letter) =>
+        letter.toUpperCase()
+      );
+      result[camelKey] = toCamelCase(obj[key]);
+      return result;
+    }, {});
+  }
+  return obj;
+};
+
 // Initialize database and create table if it doesn't exist
 async function initializeDatabase() {
   let retries = MAX_RETRIES;
@@ -111,7 +127,10 @@ app.get("/notes", async (req, res) => {
     const [rows] = await pool.query(
       "SELECT * FROM notes ORDER BY created_at DESC"
     );
-    res.json(rows);
+
+    // Convert snake_case to camelCase for frontend
+    const camelCaseRows = toCamelCase(rows);
+    res.json(camelCaseRows);
   } catch (err) {
     console.error("Error fetching notes:", err);
     res.status(500).json({ error: "Failed to fetch notes" });
@@ -140,7 +159,9 @@ app.post("/notes", async (req, res) => {
       result.insertId,
     ]);
 
-    res.status(201).json(newNote[0]);
+    // Convert snake_case to camelCase for frontend
+    const camelCaseNote = toCamelCase(newNote[0]);
+    res.status(201).json(camelCaseNote);
   } catch (err) {
     console.error("Error creating note:", err);
     res.status(500).json({ error: "Failed to create note" });
