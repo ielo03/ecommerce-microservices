@@ -2,6 +2,7 @@ services:
   # MySQL database
   mysql:
     image: mysql:8.0
+    # Remove platform specification for Amazon Linux 2023 compatibility
     ports:
       - "3306:3306"
     volumes:
@@ -11,6 +12,8 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=password
       - MYSQL_DATABASE=notes_app
+      # Add additional configuration to improve MySQL stability
+      - MYSQL_ROOT_HOST=% # Allow connections from any host
     healthcheck:
       test:
         [
@@ -22,11 +25,13 @@ services:
           "-u",
           "root",
           "-ppassword",
+          "--silent",
         ]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
-      start_period: 15s
+      retries: 10
+      start_period: 30s # Increase start period to give MySQL more time to initialize
+    restart: always # Ensure MySQL always restarts if it fails
 
   # Backend service
   backend:
@@ -36,6 +41,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    networks:
+      - app-network
     environment:
       - NODE_ENV=production
       - PORT=8082
@@ -44,15 +51,16 @@ services:
       - DB_USER=root
       - DB_PASSWORD=password
       - DB_NAME=notes_app
-    networks:
-      - app-network
+      # Add connection retry settings
+      - DB_CONNECTION_RETRIES=5
+      - DB_CONNECTION_RETRY_DELAY=5000
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8082/health"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
-    restart: on-failure
+    restart: on-failure:5 # Restart up to 5 times if the service fails
     # Ensure logs are not buffered
     tty: true
     stdin_open: true
@@ -67,12 +75,12 @@ services:
     build: ./frontend
     ports:
       - "8081:8081"
+    networks:
+      - app-network
     environment:
       - NODE_ENV=production
       - PORT=8081
       - HOST=0.0.0.0
-    networks:
-      - app-network
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8081/health"]
       interval: 10s
@@ -99,6 +107,8 @@ services:
         condition: service_healthy
       backend:
         condition: service_healthy
+    networks:
+      - app-network
     environment:
       - NODE_ENV=production
       - PORT=8080
@@ -107,8 +117,6 @@ services:
       - BACKEND_HOST=backend
       - FRONTEND_PORT=8081
       - BACKEND_PORT=8082
-    networks:
-      - app-network
     healthcheck:
       test:
         [
@@ -132,6 +140,7 @@ services:
         max-size: "10m"
         max-file: "3"
 
+# Define a custom network for service communication
 networks:
   app-network:
     driver: bridge

@@ -1,5 +1,5 @@
-# Use Node.js as the base image
-FROM node:slim
+# Use Node.js as the base image with ARM64 architecture
+FROM --platform=linux/arm64 node:slim
 
 # Set working directory
 WORKDIR /app

@@ -25,40 +25,80 @@ const dbConfig = {
   queueLimit: 0,
 };
 
+// Connection retry settings
+const MAX_RETRIES = parseInt(process.env.DB_CONNECTION_RETRIES || "5", 10);
+const RETRY_DELAY = parseInt(
+  process.env.DB_CONNECTION_RETRY_DELAY || "5000",
+  10
+);
+
 let pool;
 let dbConnection = "disconnected";
 
+// Sleep function for retry delays
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // Initialize database and create table if it doesn't exist
 async function initializeDatabase() {
-  try {
-    // Create connection pool
-    pool = mysql.createPool(dbConfig);
+  let retries = MAX_RETRIES;
 
-    // Test connection
-    const connection = await pool.getConnection();
-    console.log("Connected to MySQL");
-    console.log(`MySQL Host: ${dbConfig.host}`);
-    dbConnection = "connected";
+  while (retries >= 0) {
+    try {
+      console.log(
+        `Attempting to connect to MySQL (${MAX_RETRIES - retries + 1}/${
+          MAX_RETRIES + 1
+        })...`
+      );
 
-    // Create notes table if it doesn't exist
-    await connection.query(`
-      CREATE TABLE IF NOT EXISTS notes (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        content TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    console.log("Notes table initialized");
+      // Create connection pool
+      pool = mysql.createPool(dbConfig);
 
-    connection.release();
-  } catch (err) {
-    console.error("MySQL connection error:", err);
-    dbConnection = "error";
+      // Test connection
+      const connection = await pool.getConnection();
+      console.log("Connected to MySQL successfully!");
+      console.log(`MySQL Host: ${dbConfig.host}`);
+      dbConnection = "connected";
+
+      // Create notes table if it doesn't exist
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS notes (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          content TEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log("Notes table initialized");
+
+      connection.release();
+      return; // Success, exit the function
+    } catch (err) {
+      retries--;
+      console.error(
+        `MySQL connection error (${retries + 1} retries left):`,
+        err
+      );
+      dbConnection = "error";
+
+      if (retries >= 0) {
+        console.log(`Retrying in ${RETRY_DELAY / 1000} seconds...`);
+        await sleep(RETRY_DELAY);
+      } else {
+        console.error("Max retries reached. Could not connect to MySQL.");
+      }
+    }
   }
 }
 
 // Initialize database on startup
 initializeDatabase();
+
+// Retry connection periodically if initial connection failed
+setInterval(async () => {
+  if (dbConnection !== "connected") {
+    console.log("Attempting to reconnect to MySQL...");
+    await initializeDatabase();
+  }
+}, 30000); // Try to reconnect every 30 seconds
 
 // Routes
 // Get all notes
@@ -120,6 +160,11 @@ app.get("/health", async (req, res) => {
     } catch (err) {
       console.error("Health check failed:", err);
       currentStatus = "error";
+
+      // Try to reconnect immediately if health check fails
+      initializeDatabase().catch((err) => {
+        console.error("Failed to reconnect:", err);
+      });
     }
   }
 
