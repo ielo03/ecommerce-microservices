@@ -38,22 +38,6 @@ let dbConnection = "disconnected";
 // Sleep function for retry delays
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Helper function to convert snake_case to camelCase
-const toCamelCase = (obj) => {
-  if (Array.isArray(obj)) {
-    return obj.map((v) => toCamelCase(v));
-  } else if (obj !== null && obj !== undefined && typeof obj === "object") {
-    return Object.keys(obj).reduce((result, key) => {
-      const camelKey = key.replace(/_([a-z])/g, (_, letter) =>
-        letter.toUpperCase()
-      );
-      result[camelKey] = toCamelCase(obj[key]);
-      return result;
-    }, {});
-  }
-  return obj;
-};
-
 // Initialize database and create table if it doesn't exist
 async function initializeDatabase() {
   let retries = MAX_RETRIES;
@@ -124,13 +108,31 @@ app.get("/notes", async (req, res) => {
       return res.status(503).json({ error: "Database not connected" });
     }
 
+    // Get notes from database
     const [rows] = await pool.query(
       "SELECT * FROM notes ORDER BY created_at DESC"
     );
 
-    // Convert snake_case to camelCase for frontend
-    const camelCaseRows = toCamelCase(rows);
-    res.json(camelCaseRows);
+    console.log("Raw database rows:", JSON.stringify(rows, null, 2));
+
+    // Transform the data for the frontend
+    const transformedRows = rows.map((row) => {
+      // Convert created_at to ISO string format
+      const createdAt =
+        row.created_at instanceof Date
+          ? row.created_at.toISOString()
+          : new Date(row.created_at).toISOString();
+
+      return {
+        id: row.id,
+        content: row.content,
+        createdAt: createdAt,
+      };
+    });
+
+    console.log("Transformed rows:", JSON.stringify(transformedRows, null, 2));
+
+    res.json(transformedRows);
   } catch (err) {
     console.error("Error fetching notes:", err);
     res.status(500).json({ error: "Failed to fetch notes" });
@@ -150,18 +152,43 @@ app.post("/notes", async (req, res) => {
       return res.status(400).json({ error: "Note content is required" });
     }
 
+    // Insert new note
     const [result] = await pool.query(
       "INSERT INTO notes (content) VALUES (?)",
       [content]
     );
 
-    const [newNote] = await pool.query("SELECT * FROM notes WHERE id = ?", [
+    // Get the newly created note
+    const [newNotes] = await pool.query("SELECT * FROM notes WHERE id = ?", [
       result.insertId,
     ]);
 
-    // Convert snake_case to camelCase for frontend
-    const camelCaseNote = toCamelCase(newNote[0]);
-    res.status(201).json(camelCaseNote);
+    if (newNotes.length === 0) {
+      throw new Error("Failed to retrieve newly created note");
+    }
+
+    const newNote = newNotes[0];
+    console.log("Raw new note:", JSON.stringify(newNote, null, 2));
+
+    // Convert created_at to ISO string format
+    const createdAt =
+      newNote.created_at instanceof Date
+        ? newNote.created_at.toISOString()
+        : new Date(newNote.created_at).toISOString();
+
+    // Transform the data for the frontend
+    const transformedNote = {
+      id: newNote.id,
+      content: newNote.content,
+      createdAt: createdAt,
+    };
+
+    console.log(
+      "Transformed new note:",
+      JSON.stringify(transformedNote, null, 2)
+    );
+
+    res.status(201).json(transformedNote);
   } catch (err) {
     console.error("Error creating note:", err);
     res.status(500).json({ error: "Failed to create note" });
