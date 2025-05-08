@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Notes App</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      h1 {
+        color: #333;
+      }
+      .note {
+        background-color: #f9f9f9;
+        border-left: 4px solid #4caf50;
+        margin-bottom: 15px;
+        padding: 15px;
+        border-radius: 4px;
+      }
+      .note-date {
+        color: #777;
+        font-size: 0.8em;
+        margin-top: 5px;
+      }
+      form {
+        margin-bottom: 30px;
+        background-color: #f0f0f0;
+        padding: 20px;
+        border-radius: 4px;
+      }
+      textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        min-height: 100px;
+        margin-bottom: 10px;
+        box-sizing: border-box;
+      }
+      button {
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      .status {
+        margin-top: 20px;
+        padding: 10px;
+        border-radius: 4px;
+      }
+      .status.good {
+        background-color: #dff0d8;
+        color: #3c763d;
+      }
+      .status.bad {
+        background-color: #f2dede;
+        color: #a94442;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Notes App</h1>
+
+    <div id="status" class="status"></div>
+
+    <form id="note-form">
+      <h2>Add a New Note</h2>
+      <textarea
+        id="note-content"
+        placeholder="Enter your note here..."
+        required></textarea>
+      <button type="submit">Save Note</button>
+    </form>
+
+    <h2>Your Notes</h2>
+    <div id="notes-container"></div>
+
+    <script>
+      // API endpoints
+      const API_URL = "/api";
+      const HEALTH_URL = "/health";
+
+      // DOM elements
+      const noteForm = document.getElementById("note-form");
+      const noteContent = document.getElementById("note-content");
+      const notesContainer = document.getElementById("notes-container");
+      const statusContainer = document.getElementById("status");
+
+      // Check system health
+      async function checkHealth() {
+        try {
+          const response = await fetch(HEALTH_URL);
+          const health = await response.json();
+
+          let statusHTML = `
+                    <h3>System Status: ${health.overall}</h3>
+                    <p>API Gateway: ${health.services.apiGateway.status}</p>
+                    <p>Frontend: ${health.services.frontend.status}</p>
+                    <p>Backend: ${health.services.backend.status}</p>
+                `;
+
+          statusContainer.innerHTML = statusHTML;
+          statusContainer.className = `status ${
+            health.overall === "good" ? "good" : "bad"
+          }`;
+        } catch (error) {
+          statusContainer.innerHTML = `<h3>System Status: Error</h3><p>${error.message}</p>`;
+          statusContainer.className = "status bad";
+        }
+      }
+
+      // Fetch all notes
+      async function fetchNotes() {
+        try {
+          const response = await fetch(`${API_URL}/notes`);
+          const notes = await response.json();
+
+          notesContainer.innerHTML = "";
+
+          if (notes.length === 0) {
+            notesContainer.innerHTML =
+              "<p>No notes yet. Add your first note!</p>";
+            return;
+          }
+
+          notes.forEach((note) => {
+            const date = new Date(note.createdAt).toLocaleString();
+            const noteElement = document.createElement("div");
+            noteElement.className = "note";
+            noteElement.innerHTML = `
+                        <p>${note.content}</p>
+                        <div class="note-date">Created: ${date}</div>
+                    `;
+            notesContainer.appendChild(noteElement);
+          });
+        } catch (error) {
+          notesContainer.innerHTML = `<p>Error loading notes: ${error.message}</p>`;
+        }
+      }
+
+      // Add a new note
+      async function addNote(content) {
+        try {
+          const response = await fetch(`${API_URL}/notes`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ content }),
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || "Failed to add note");
+          }
+
+          // Clear the form and refresh notes
+          noteContent.value = "";
+          await fetchNotes();
+        } catch (error) {
+          alert(`Error adding note: ${error.message}`);
+        }
+      }
+
+      // Event listeners
+      noteForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const content = noteContent.value.trim();
+        if (content) {
+          await addNote(content);
+        }
+      });
+
+      // Initialize
+      document.addEventListener("DOMContentLoaded", async () => {
+        await checkHealth();
+        await fetchNotes();
+
+        // Periodically check health
+        setInterval(checkHealth, 30000);
+      });
+    </script>
+  </body>
+</html>
