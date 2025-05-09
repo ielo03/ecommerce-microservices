@@ -29,7 +29,7 @@ app.use((req, res, next) => {
 app.get("/api-gateway/health", (req, res) => {
   console.log("API Gateway health endpoint called");
   res.json({
-    status: "good",
+    status: "good 1.0.3",
     service: "api-gateway",
     timestamp: new Date().toISOString(),
     config: {

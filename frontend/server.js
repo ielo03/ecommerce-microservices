@@ -12,7 +12,7 @@ app.use(express.static(path.join(__dirname)));
 // Health endpoint
 app.get("/health", (req, res) => {
   res.json({
-    status: "good",
+    status: "good 1.0.2",
     service: "frontend",
     timestamp: new Date().toISOString(),
   });

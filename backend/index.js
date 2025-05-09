@@ -217,7 +217,7 @@ app.get("/health", async (req, res) => {
   }
 
   res.json({
-    status: currentStatus === "connected" ? "good" : "degraded",
+    status: (currentStatus === "connected" ? "good" : "degraded") + " 1.0.3",
     service: "backend",
     database: currentStatus,
     config: {
