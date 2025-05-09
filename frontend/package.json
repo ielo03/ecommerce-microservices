@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "1.0.0",
+  "version": "next_version",
   "description": "Frontend service for ecommerce microservices",
   "main": "server.js",
   "scripts": {

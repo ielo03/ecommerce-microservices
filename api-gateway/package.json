@@ -1,6 +1,6 @@
 {
   "name": "api-gateway",
-  "version": "1.0.0",
+  "version": "next_version",
   "description": "API Gateway for ecommerce microservices",
   "main": "index.js",
   "scripts": {

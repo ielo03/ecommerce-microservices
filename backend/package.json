@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "1.0.0",
+  "version": "next_version",
   "description": "Backend service for ecommerce microservices",
   "main": "index.js",
   "scripts": {
