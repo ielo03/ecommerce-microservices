@@ -14,6 +14,8 @@ app.use((req, res, next) => {
   next();
 });
 
+const backend_version = "${BACKEND_VERSION}";
+
 // MySQL connection
 const dbConfig = {
   host: process.env.DB_HOST || "localhost",
@@ -217,7 +219,9 @@ app.get("/health", async (req, res) => {
   }
 
   res.json({
-    status: (currentStatus === "connected" ? "good" : "degraded") + " 1.0.4",
+    status:
+      (currentStatus === "connected" ? "good" : "degraded") +
+      ` ${backend_version}`,
     service: "backend",
     database: currentStatus,
     config: {

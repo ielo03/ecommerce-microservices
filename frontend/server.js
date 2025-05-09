@@ -6,13 +6,15 @@ const app = express();
 const PORT = process.env.PORT || 8081;
 const HOST = process.env.HOST || "0.0.0.0"; // Bind to all network interfaces
 
+const frontend_version = "${FRONTEND_VERSION}";
+
 // Serve static files
 app.use(express.static(path.join(__dirname)));
 
 // Health endpoint
 app.get("/health", (req, res) => {
   res.json({
-    status: "good 1.0.4",
+    status: `good ${frontend_version}`,
     service: "frontend",
     timestamp: new Date().toISOString(),
   });
