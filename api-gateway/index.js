@@ -25,11 +25,13 @@ app.use((req, res, next) => {
   next();
 });
 
+const api_gateway_status = "good 1.0.4";
+
 // API Gateway health endpoint
 app.get("/api-gateway/health", (req, res) => {
   console.log("API Gateway health endpoint called");
   res.json({
-    status: "good 1.0.3",
+    status: api_gateway_status,
     service: "api-gateway",
     timestamp: new Date().toISOString(),
     config: {
@@ -45,7 +47,7 @@ app.get("/health", async (req, res) => {
 
   // API Gateway health is always good if we're serving this request
   const apiGatewayHealth = {
-    status: "good",
+    status: api_gateway_status,
     service: "api-gateway",
     timestamp: new Date().toISOString(),
     config: {
