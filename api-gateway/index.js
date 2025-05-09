@@ -25,7 +25,7 @@ app.use((req, res, next) => {
   next();
 });
 
-const api_gateway_status = "good 1.0.4";
+const api_gateway_status = "good 1.0.5";
 
 // API Gateway health endpoint
 app.get("/api-gateway/health", (req, res) => {
@@ -116,7 +116,8 @@ app.get("/health", async (req, res) => {
       backend: backendHealth,
     },
     overall:
-      frontendHealth.status === "good" && backendHealth.status === "good"
+      frontendHealth.status.startsWith("good") &&
+      backendHealth.status.startsWith("good")
         ? "good"
         : "degraded",
     timestamp: new Date().toISOString(),
