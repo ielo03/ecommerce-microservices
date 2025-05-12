@@ -42,7 +42,7 @@ app.get("/api-gateway/health", (_, res) => {
 });
 
 // Combined health endpoint for all services
-app.get("/health", async (req, res) => {
+app.get("/health", async (_, res) => {
   console.log("Health endpoint called");
 
   // API Gateway health is always good if we're serving this request
