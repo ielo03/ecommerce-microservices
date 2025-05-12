@@ -68,6 +68,11 @@
     </style>
   </head>
   <body>
+    <div id="env-buttons" style="margin-bottom: 20px">
+      <a href="https://qa.colbydobson.com" class="env-button">QA</a>
+      <a href="https://uat.colbydobson.com" class="env-button">UAT</a>
+      <a href="https://prod.colbydobson.com" class="env-button">Prod</a>
+    </div>
     <h1>Notes App</h1>
 
     <div id="status" class="status"></div>
@@ -187,6 +192,15 @@
 
         // Periodically check health
         setInterval(checkHealth, 30000);
+      });
+    </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        document.querySelectorAll(".env-button").forEach((btn) => {
+          if (new URL(btn.href).hostname === window.location.hostname) {
+            btn.style.display = "none";
+          }
+        });
       });
     </script>
   </body>
