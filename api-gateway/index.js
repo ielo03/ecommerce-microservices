@@ -28,7 +28,7 @@ app.use((req, res, next) => {
 const api_gateway_version = "${API_GATEWAY_VERSION}";
 
 // API Gateway health endpoint
-app.get("/api-gateway/health", (req, res) => {
+app.get("/api-gateway/health", (_, res) => {
   console.log("API Gateway health endpoint called");
   res.json({
     status: `good ${api_gateway_version}`,
