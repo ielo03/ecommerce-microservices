@@ -72,7 +72,7 @@ async function initializeDatabase() {
       console.log("Notes table initialized");
 
       connection.release();
-      return; // Success, exit the function
+      return;
     } catch (err) {
       retries--;
       console.error(
