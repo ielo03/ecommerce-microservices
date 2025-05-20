@@ -34,6 +34,8 @@ const RETRY_DELAY = parseInt(
   10
 );
 
+// Changes
+
 let pool;
 let dbConnection = "disconnected";
 
